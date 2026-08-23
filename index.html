@@ -133,7 +133,11 @@
   var WEBHOOK_URL = "https://hook.eu1.make.com/zzrivke4mrh0oki1axk5gluoywtw3emq";
 
   var tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-  if (tg) {
+  // ה-SDK נטען בכל דפדפן ומגדיר את window.Telegram גם מחוץ לטלגרם, אז נוכחות
+  // האובייקט לא מספיקה. platform הוא "unknown" כשלא באמת נמצאים בתוך טלגרם.
+  var inTelegram = !!(tg && tg.platform && tg.platform !== "unknown");
+
+  if (inTelegram) {
     tg.ready();
     tg.expand();
     // טלגרם כבר יודע איך קוראים לו - ממלאים מראש, וניתן לתקן
@@ -142,6 +146,25 @@
       var full = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
       if (full) document.getElementById("name").value = full;
     }
+  }
+
+  // מאיפה הליד הגיע. שני מקורות, לפי איך שנפתח העמוד:
+  //   t.me/Or_harashbi_bot/lead?startapp=whatsapp  -> start_param מטלגרם
+  //   ...github.io/telegram-lead-form/?source=...  -> פרמטר בכתובת (גם utm_source)
+  // מנוקה לאותיות, ספרות, מקף וקו תחתון בלבד, כדי שמה שנכנס ל-Make יהיה
+  // ערך אחד צפוי שאפשר לקבץ לפיו - ולא טקסט חופשי מכתובת שמישהו הדביק.
+  function readSource() {
+    var raw = "";
+    if (inTelegram && tg.initDataUnsafe) raw = tg.initDataUnsafe.start_param || "";
+    if (!raw) {
+      var q = new URLSearchParams(window.location.search);
+      raw = q.get("source") || q.get("utm_source") || "";
+      var campaign = q.get("utm_campaign");
+      if (raw && campaign) raw = raw + "-" + campaign;
+    }
+    var clean = String(raw).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 64);
+    // תמיד יוצא ערך כלשהו: שדה שלפעמים נעלם שובר את מבנה הנתונים ב-Make
+    return clean || (inTelegram ? "telegram" : "direct");
   }
 
   var form = document.getElementById("lead-form");
@@ -173,7 +196,8 @@
     // לקרוא את קוד התשובה.
     var body = new URLSearchParams({
       name: name,
-      phone: phone.charAt(0) === "+" ? "+" + digits : digits
+      phone: phone.charAt(0) === "+" ? "+" + digits : digits,
+      source: readSource()
     });
 
     fetch(WEBHOOK_URL, { method: "POST", mode: "no-cors", body: body })
@@ -183,7 +207,7 @@
         window.scrollTo(0, 0);
         // בתוך טלגרם סוגרים את החלון, אבל רק אחרי שהספיקו לקרוא את התודה.
         // בדפדפן רגיל אין מה לסגור - מסך התודה פשוט נשאר.
-        if (tg) setTimeout(function () { tg.close(); }, 3000);
+        if (inTelegram) setTimeout(function () { tg.close(); }, 3000);
       })
       .catch(function () {
         button.disabled = false;
