@@ -48,11 +48,29 @@
     color: var(--gold-d);
   }
   p.lead {
-    margin: 0 auto 26px;
-    max-width: 340px;
+    margin: 0 auto 14px;
+    max-width: 350px;
     font-size: 17px; line-height: 1.6;
     text-align: center;
     color: var(--text);
+  }
+  p.cta {
+    margin: 0 auto 22px;
+    max-width: 350px;
+    font-size: 18px; font-weight: 700; line-height: 1.5;
+    text-align: center;
+    color: var(--gold-d);
+  }
+
+  .video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;      /* מידות הקליפ - שומר את המקום ומונע קפיצה */
+    margin: 22px 0 0;          /* יושב מתחת לטופס */
+    background: #2a1a0d;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    object-fit: contain;
   }
 
   .card {
@@ -105,7 +123,9 @@
 
   <form id="lead-form" novalidate>
     <h1>דבש הברכה 🍯</h1>
-    <p class="lead">לקבלת דבש הברכה המקודש ישירות לביתכם השאירו פרטים</p>
+    <p class="lead">המסוגל לבריאות, אושר, נחת, הצלחה ופתיחת המזל לקראת השנה החדשה שבפתח 😇</p>
+    <p class="lead">הדבש עושה את דרכו בימים אלו לעשרות אלפי בתים בישראל, מה איתך?</p>
+    <p class="cta">✅ לקבלת דבש הברכה המקודש ישירות לביתכם &gt;&gt;&gt;&gt;</p>
 
     <div class="card">
       <p id="error" class="error hidden"></p>
@@ -118,6 +138,16 @@
 
       <button type="submit" id="submit">שליחת פרטים</button>
     </div>
+
+    <!-- video.mp4 בשורש ה-repo, כמו הלוגו. preload="metadata" ולא autoplay:
+         רוב הגולשים על סלולר, ולא מורידים להם 4.5MB לפני שביקשו.
+         playsinline קריטי באייפון - בלעדיו הנגן קופץ למסך מלא ומוציא אותם
+         מהעמוד. אם הקובץ חסר, מסתירים את הנגן במקום להשאיר מלבן שבור.
+         יושב בתוך ה-form, כדי שייעלם יחד איתו כשמסך התודה עולה. -->
+    <video class="video" id="video"
+           src="video.mp4"
+           controls playsinline preload="metadata"
+           onerror="this.style.display='none'"></video>
   </form>
 
   <div id="done" class="hidden">
