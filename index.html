@@ -15,6 +15,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- פיקסל PostAd. נטען בכל כניסה לעמוד ומגדיר את teleads, שדרכו מדווחת
+     ההמרה בהמשך (trackLead) - ראה את ההערה שם. -->
+<script src="https://www.postad.co.il/a.js?v=8"></script>
 <style>
   /* צבעי המותג, ולא ערכת הנושא של טלגרם: העמוד הזה נשלח גם בוואטסאפ
      ובמודעות, וצריך להיראות אותו דבר בכל מקום */
@@ -207,6 +210,25 @@
   var errorBox = document.getElementById("error");
   var button = document.getElementById("submit");
 
+  // דיווח ההמרה ל-PostAd. במבנה הרגיל הקוד הזה יושב בדף תודה נפרד ויורה
+  // בטעינתו - כאן אין דף כזה, מסך התודה מתחלף באותו עמוד. לכן קוראים לזה
+  // רק אחרי שליחה מוצלחת; אילו זה היה רץ בטעינת העמוד, כל מי שסתם פתח את
+  // הלינק היה נספר כליד.
+  //
+  // הניסיונות החוזרים הם למקרה ש-a.js עדיין לא סיים להיטען כשנשלח הטופס
+  // (רשת סלולרית איטית, גולש מהיר): עד 25 ניסיונות כל 200ms, כ-5 שניות.
+  function trackLead(onTracked) {
+    var n = 0;
+    (function fire() {
+      if (typeof teleads !== "undefined") {
+        teleads.track("lead");
+        if (onTracked) onTracked();
+        return;
+      }
+      if (++n < 25) setTimeout(fire, 200);
+    })();
+  }
+
   function showError(message) {
     errorBox.textContent = message;
     errorBox.classList.remove("hidden");
@@ -241,9 +263,25 @@
         form.classList.add("hidden");
         document.getElementById("done").classList.remove("hidden");
         window.scrollTo(0, 0);
+
         // בתוך טלגרם סוגרים את החלון, אבל רק אחרי שהספיקו לקרוא את התודה.
         // בדפדפן רגיל אין מה לסגור - מסך התודה פשוט נשאר.
-        if (inTelegram) setTimeout(function () { tg.close(); }, 3000);
+        //
+        // הסגירה מחכה גם לדיווח ההמרה: חלון שנסגר הורג את הסקריפט שרץ בו,
+        // וסגירה קבועה אחרי 3 שניות הייתה קוטעת פיקסל איטי באמצע הניסיונות
+        // החוזרים - ליד שנרשם ב-Make אבל לא נספר בקמפיין. לכן: לא לפני
+        // 3 שניות (שיספיקו לקרוא), לא לפני שההמרה דווחה, ולא יותר מ-6
+        // שניות בסך הכל - שגם פיקסל שלא נטען כלל לא ישאיר את החלון תקוע.
+        var shownAt = Date.now(), closed = false;
+        function closeNow() {
+          if (closed || !inTelegram) return;
+          closed = true;
+          tg.close();
+        }
+        trackLead(function () {
+          setTimeout(closeNow, Math.max(0, 3000 - (Date.now() - shownAt)));
+        });
+        setTimeout(closeNow, 6000);
       })
       .catch(function () {
         button.disabled = false;
